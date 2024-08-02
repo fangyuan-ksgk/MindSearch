@@ -4,6 +4,7 @@ import logging
 from copy import deepcopy
 from dataclasses import asdict
 from typing import Dict, List, Union
+import uvicorn
 
 import janus
 from fastapi import FastAPI
@@ -40,6 +41,11 @@ class GenerationParams(BaseModel):
     inputs: Union[str, List[Dict]]
     agent_cfg: Dict = dict()
 
+
+# Add a health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 @app.post('/solve')
 async def run(request: GenerationParams):
@@ -122,7 +128,14 @@ async def run(request: GenerationParams):
     agent = init_agent(lang=args.lang, model_format=args.model_format)
     return EventSourceResponse(generate())
 
+# Function to start the server programmatically
+def start_server(host: str = '0.0.0.0', port: int = 8002):
+    config = uvicorn.Config(app, host=host, port=port, log_level='info')
+    server = uvicorn.Server(config)
+    return server
 
 if __name__ == '__main__':
-    import uvicorn
     uvicorn.run(app, host='0.0.0.0', port=8002, log_level='info')
+else:
+    # This allows us to import and use start_server in other scripts
+    server = start_server
